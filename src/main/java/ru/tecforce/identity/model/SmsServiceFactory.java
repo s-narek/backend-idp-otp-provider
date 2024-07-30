@@ -6,14 +6,14 @@ import ru.tecforce.identity.SmsConstants;
 import java.util.Map;
 
 @Slf4j
-public class OtpServiceFactory {
+public class SmsServiceFactory {
 
-	public static OtpService get(Map<String, String> config) {
+	public static SmsClient get(Map<String, String> config) {
 		if (Boolean.parseBoolean(config.getOrDefault(SmsConstants.SIMULATION_MODE, "false"))) {
-			return (phoneNumber, message) ->
+			return (message, phoneNumber) ->
 				log.warn(String.format("***** SIMULATION MODE ***** Would send SMS to %s with text: %s", phoneNumber, message));
 		} else {
-			return new OtpServiceImpl(config);
+			return new SmsClientImpl(config);
 		}
 	}
 

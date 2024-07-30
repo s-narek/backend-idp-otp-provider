@@ -6,18 +6,18 @@ import software.amazon.awssdk.services.sns.model.MessageAttributeValue;
 import java.util.HashMap;
 import java.util.Map;
 
-public class OtpServiceImpl implements OtpService {
+public class SmsClientImpl implements SmsClient {
 
 	private static final SnsClient sns = SnsClient.create();
 
 	private final String senderId;
 
-	OtpServiceImpl(Map<String, String> config) {
+	SmsClientImpl(Map<String, String> config) {
 		senderId = config.get("senderId");
 	}
 
 	@Override
-	public void send(String phoneNumber, String message) {
+	public void sendSms(String message, String phoneNumber) {
 		Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
 		messageAttributes.put("AWS.SNS.SMS.SenderID",
 			MessageAttributeValue.builder().stringValue(senderId).dataType("String").build());

@@ -8,7 +8,7 @@ import org.keycloak.common.util.SecretGenerator;
 import org.keycloak.models.*;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.theme.Theme;
-import ru.tecforce.identity.model.OtpServiceFactory;
+import ru.tecforce.identity.model.SmsServiceFactory;
 
 import java.util.Locale;
 
@@ -40,7 +40,7 @@ public class SmsAuthenticator implements Authenticator {
 			String smsAuthText = theme.getMessages(locale).getProperty("smsAuthText");
 			String smsText = String.format(smsAuthText, code, Math.floorDiv(ttl, 60));
 
-			OtpServiceFactory.get(config.getConfig()).send(mobileNumber, smsText);
+			SmsServiceFactory.get(config.getConfig()).sendSms(smsText, mobileNumber);
 
 			context.challenge(context.form().setAttribute("realm", context.getRealm()).createForm(TPL_CODE));
 		} catch (Exception e) {
