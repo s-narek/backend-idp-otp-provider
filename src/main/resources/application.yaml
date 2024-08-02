@@ -1,0 +1,37 @@
+identity.otp:
+  length: 4
+  retries: 3
+  ttlSeconds: 60
+  sms:
+    url: "https://smsc.ru/rest/send/"
+    login: "april-inn.ru"
+    password: "password"
+    sender: "april-inn"
+    mes: "Ваш одноразовый код: %s"
+    provider: "smsc"
+
+spring:
+  redis:
+    host: localhost
+    port: 6379
+  datasource:
+    url: "jdbc:postgresql://localhost:5432/identity"
+    username: postgres
+    password: postgres
+  flyway:
+    enabled: true
+  jpa:
+    hibernate:
+      naming:
+        physical-strategy: org.springframework.boot.orm.jpa.hibernate.SpringPhysicalNamingStrategy
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8443/realms/master
+
+logging:
+  level:
+    org.springframework.web.servlet: DEBUG
+    ru.tecforce.identity: DEBUG
+    root: INFO

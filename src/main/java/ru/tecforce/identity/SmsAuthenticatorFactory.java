@@ -8,6 +8,9 @@ import org.keycloak.models.AuthenticationExecutionModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 import org.keycloak.provider.ProviderConfigProperty;
+import org.springframework.ws.client.core.WebServiceTemplate;
+import ru.tecforce.identity.sms.SmsClientImpl;
+import ru.tecforce.identity.sms.SmsClientProperties;
 
 import java.util.List;
 
@@ -15,8 +18,6 @@ import java.util.List;
 public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 
 	public static final String PROVIDER_ID = "sms-authenticator";
-
-	private static final SmsAuthenticator SINGLETON = new SmsAuthenticator();
 
 	@Override
 	public String getId() {
@@ -58,14 +59,17 @@ public class SmsAuthenticatorFactory implements AuthenticatorFactory {
 		return List.of(
 			new ProviderConfigProperty(SmsConstants.CODE_LENGTH, "Code length", "The number of digits of the generated code.", ProviderConfigProperty.STRING_TYPE, 6),
 			new ProviderConfigProperty(SmsConstants.CODE_TTL, "Time-to-live", "The time to live in seconds for the code to be valid.", ProviderConfigProperty.STRING_TYPE, "300"),
-			new ProviderConfigProperty(SmsConstants.SENDER_ID, "SenderId", "The sender ID is displayed as the message sender on the receiving device.", ProviderConfigProperty.STRING_TYPE, "Keycloak"),
-			new ProviderConfigProperty(SmsConstants.SIMULATION_MODE, "Simulation mode", "In simulation mode, the SMS won't be sent, but printed to the server logs", ProviderConfigProperty.BOOLEAN_TYPE, true)
+			new ProviderConfigProperty(SmsConstants.RETRIES, "Retries", "Retries.", ProviderConfigProperty.STRING_TYPE, "2")
 		);
 	}
 
 	@Override
 	public Authenticator create(KeycloakSession session) {
-		return SINGLETON;
+		WebServiceTemplate webServiceTemplate = new WebServiceTemplate();
+		SmsClientProperties properties = new SmsClientProperties(); // Настройте свойства по мере необходимости
+
+		SmsClientImpl smsClient = new SmsClientImpl(webServiceTemplate, properties);
+		return new SmsAuthenticator(smsClient);
 	}
 
 	@Override

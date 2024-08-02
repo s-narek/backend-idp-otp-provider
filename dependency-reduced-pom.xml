@@ -31,6 +31,24 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>jaxb2-maven-plugin</artifactId>
+        <version>${jaxb2.maven.plugin.version}</version>
+        <executions>
+          <execution>
+            <id>xjc</id>
+            <goals>
+              <goal>xjc</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <sources>
+            <source>${project.basedir}/src/main/resources/xsd/outMessageClient.xsd</source>
+          </sources>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
   <dependencies>
@@ -73,5 +91,6 @@
     <keycloak.version>17.0.0</keycloak.version>
     <maven.compiler.source>11</maven.compiler.source>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <jaxb2.maven.plugin.version>2.5.0</jaxb2.maven.plugin.version>
   </properties>
 </project>

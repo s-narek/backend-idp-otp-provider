@@ -1,4 +1,4 @@
-package ru.tecforce.identity.model;
+package ru.tecforce.identity.sms;
 
 public interface SmsClient {
 

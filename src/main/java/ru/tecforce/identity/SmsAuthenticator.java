@@ -1,18 +1,30 @@
 package ru.tecforce.identity;
 
 import javax.ws.rs.core.Response;
+
 import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.AuthenticationFlowError;
 import org.keycloak.authentication.Authenticator;
-import org.keycloak.common.util.SecretGenerator;
-import org.keycloak.models.*;
+import org.keycloak.models.AuthenticationExecutionModel;
+import org.keycloak.models.AuthenticatorConfigModel;
+import org.keycloak.models.KeycloakSession;
+import org.keycloak.models.RealmModel;
+import org.keycloak.models.UserModel;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.theme.Theme;
-import ru.tecforce.identity.model.SmsServiceFactory;
+import ru.tecforce.identity.exception.ServiceException;
+import ru.tecforce.identity.exception.ValidationException;
+import ru.tecforce.identity.sms.SmsClientImpl;
 
 import java.util.Locale;
+import java.util.Random;
 
 public class SmsAuthenticator implements Authenticator {
+	private final SmsClientImpl smsClient;
+
+	public SmsAuthenticator(SmsClientImpl smsClient) {
+		this.smsClient = smsClient;
+	}
 
 	private static final String MOBILE_NUMBER_FIELD = "mobile_number";
 	private static final String TPL_CODE = "login-sms.ftl";
@@ -24,12 +36,14 @@ public class SmsAuthenticator implements Authenticator {
 		UserModel user = context.getUser();
 
 		String mobileNumber = user.getFirstAttribute(MOBILE_NUMBER_FIELD);
-		// mobileNumber of course has to be further validated on proper format, country code, ...
+		if (mobileNumber.length() != 11) {
+			throw new ValidationException("Phone incorrect");
+		}
 
 		int length = Integer.parseInt(config.getConfig().get(SmsConstants.CODE_LENGTH));
 		int ttl = Integer.parseInt(config.getConfig().get(SmsConstants.CODE_TTL));
 
-		String code = SecretGenerator.getInstance().randomString(length, SecretGenerator.DIGITS);
+		String code = generateOtp(length);
 		AuthenticationSessionModel authSession = context.getAuthenticationSession();
 		authSession.setAuthNote(SmsConstants.CODE, code);
 		authSession.setAuthNote(SmsConstants.CODE_TTL, Long.toString(System.currentTimeMillis() + (ttl * 1000L)));
@@ -40,7 +54,7 @@ public class SmsAuthenticator implements Authenticator {
 			String smsAuthText = theme.getMessages(locale).getProperty("smsAuthText");
 			String smsText = String.format(smsAuthText, code, Math.floorDiv(ttl, 60));
 
-			SmsServiceFactory.get(config.getConfig()).sendSms(smsText, mobileNumber);
+			smsClient.sendSms(smsText, mobileNumber);
 
 			context.challenge(context.form().setAttribute("realm", context.getRealm()).createForm(TPL_CODE));
 		} catch (Exception e) {
@@ -53,11 +67,16 @@ public class SmsAuthenticator implements Authenticator {
 	@Override
 	public void action(AuthenticationFlowContext context) {
 		String enteredCode = context.getHttpRequest().getDecodedFormParameters().getFirst(SmsConstants.CODE);
+		String enteredRetries = context.getHttpRequest().getDecodedFormParameters().getFirst(SmsConstants.RETRIES);
 
 		AuthenticationSessionModel authSession = context.getAuthenticationSession();
 		String code = authSession.getAuthNote(SmsConstants.CODE);
+		String retries = authSession.getAuthNote(SmsConstants.RETRIES);
 		String ttl = authSession.getAuthNote(SmsConstants.CODE_TTL);
-
+		int retriesInt = Integer.parseInt(retries);
+		if (retriesInt >= Integer.parseInt(enteredRetries)) {
+			throw new ServiceException("Otp not sent", "LIMIT_EXCEEDED");
+		}
 		if (code == null || ttl == null) {
 			context.failureChallenge(AuthenticationFlowError.INTERNAL_ERROR,
 				context.form().createErrorPage(Response.Status.INTERNAL_SERVER_ERROR));
@@ -76,6 +95,7 @@ public class SmsAuthenticator implements Authenticator {
 			}
 		} else {
 			// invalid
+			authSession.setAuthNote(SmsConstants.RETRIES, String.valueOf(retriesInt + 1));
 			AuthenticationExecutionModel execution = context.getExecution();
 			if (execution.isRequired()) {
 				context.failureChallenge(AuthenticationFlowError.INVALID_CREDENTIALS,
@@ -106,4 +126,12 @@ public class SmsAuthenticator implements Authenticator {
 	public void close() {
 	}
 
+	private String generateOtp(int length) {
+		Random otp = new Random();
+		StringBuilder builder = new StringBuilder();
+		for (int count = 0; count < length; count ++) {
+			builder.append(otp.nextInt(10));
+		}
+		return builder.toString();
+	}
 }
